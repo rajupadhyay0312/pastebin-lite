@@ -14,6 +14,8 @@ export default function HomePage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    if (loading) return; // ✅ prevent double submit
+
     setError("");
     setResultUrl("");
 
@@ -38,8 +40,7 @@ export default function HomePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Failed to create paste");
-        setLoading(false);
+        setError(data?.error || "Failed to create paste");
         return;
       }
 
@@ -48,11 +49,11 @@ export default function HomePage() {
       setContent("");
       setTtl("");
       setMaxViews("");
-    } catch {
+    } catch (err) {
       setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   return (
@@ -70,6 +71,7 @@ export default function HomePage() {
 
           <input
             type="number"
+            min="1"
             placeholder="TTL in seconds (optional)"
             value={ttl}
             onChange={(e) => setTtl(e.target.value)}
@@ -78,6 +80,7 @@ export default function HomePage() {
 
           <input
             type="number"
+            min="1"
             placeholder="Max views (optional)"
             value={maxViews}
             onChange={(e) => setMaxViews(e.target.value)}
@@ -88,7 +91,15 @@ export default function HomePage() {
             ⚠️ Each page open (including refresh) counts as one view.
           </p>
 
-          <button type="submit" style={styles.button} disabled={loading}>
+          <button
+            type="submit"
+            style={{
+              ...styles.button,
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+            disabled={loading}
+          >
             {loading ? "Creating..." : "Create Paste"}
           </button>
         </form>
@@ -173,7 +184,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: "#2563eb",
     color: "#ffffff",
     fontSize: "16px",
-    cursor: "pointer",
   },
   error: {
     marginTop: "12px",

@@ -1,113 +1,86 @@
-async function getPaste(id: string) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/pastes/${id}`,
-    { cache: "no-store" }
-  );
+type PasteResponse = {
+  content: string;
+  expires_at: number | null;
+  views_remaining: number | null;
+};
 
-  if (!res.ok) return null;
-  return res.json();
-}
-
-export default async function PastePage({
-  params,
-}: {
+type PageProps = {
   params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const paste = await getPaste(id);
+};
 
-  if (!paste) {
+export default async function PastePage({ params }: PageProps) {
+  const { id } = await params;
+
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
+
+  const res = await fetch(`${baseUrl}/api/pastes/${id}`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
     return (
       <main style={styles.container}>
         <div style={styles.card}>
-          <h1 style={styles.title}>Paste not available</h1>
-          <p style={styles.text}>
-            This paste may have expired or does not exist.
-          </p>
+          <h1>Paste not available</h1>
+          <p>This paste may have expired or does not exist.</p>
         </div>
       </main>
     );
   }
 
+  const paste: PasteResponse = await res.json();
+
   return (
     <main style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Paste</h1>
+        <h1>Paste</h1>
 
-        <pre style={styles.code}>
-          {paste.content}
-        </pre>
+        <pre style={styles.pre}>{paste.content}</pre>
 
-        <div style={styles.meta}>
-          {paste.views_remaining !== null && (
-            <span>
-              👁️ Views remaining: <b>{paste.views_remaining}</b>
-            </span>
-          )}
+        {paste.views_remaining !== null && (
+          <p style={styles.meta}>
+            👁️ Views remaining: {paste.views_remaining}
+          </p>
+        )}
 
-          {paste.expires_at && (
-            <span>
-              ⏳ Expires at:{" "}
-              <b>{new Date(paste.expires_at).toLocaleString()}</b>
-            </span>
-          )}
-        </div>
+        {paste.expires_at && (
+          <p style={styles.meta}>
+            ⏰ Expires at:{" "}
+            {new Date(paste.expires_at).toLocaleString()}
+          </p>
+        )}
       </div>
     </main>
   );
 }
 
-/* ---------- Styles ---------- */
-
-const styles: Record<string, React.CSSProperties> = {
+const styles = {
   container: {
     minHeight: "100vh",
+    backgroundColor: "#020617",
     display: "flex",
     justifyContent: "center",
-    alignItems: "flex-start",
-    backgroundColor: "#0f172a", // dark slate
-    padding: "2rem",
+    alignItems: "center",
+    color: "#e5e7eb",
   },
-
   card: {
+    maxWidth: "700px",
     width: "100%",
-    maxWidth: "720px",
-    backgroundColor: "#020617", // near-black
-    borderRadius: "12px",
-    padding: "2rem",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
-  },
-
-  title: {
-    marginBottom: "1rem",
-    fontSize: "1.75rem",
-    fontWeight: 600,
-    color: "#e5e7eb",
-  },
-
-  text: {
-    color: "#cbd5f5",
-    fontSize: "1rem",
-    lineHeight: 1.6,
-  },
-
-  code: {
-    whiteSpace: "pre-wrap",
-    backgroundColor: "#020617",
-    color: "#e5e7eb",
-    padding: "1rem",
-    borderRadius: "8px",
+    padding: "24px",
     border: "1px solid #1e293b",
-    fontSize: "0.95rem",
-    lineHeight: 1.6,
-    marginBottom: "1.5rem",
+    borderRadius: "12px",
+    backgroundColor: "#020617",
   },
-
+  pre: {
+    whiteSpace: "pre-wrap" as const,
+    wordBreak: "break-word" as const,
+    marginTop: "12px",
+  },
   meta: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.5rem",
-    fontSize: "0.9rem",
-    color: "#94a3b8",
+    marginTop: "12px",
+    fontSize: "14px",
+    color: "#9ca3af",
   },
 };

@@ -22,5 +22,9 @@
     "eslint-config-next": "16.1.5",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "engines": {
+  "node": ">=18 <21"
+}
+
 }

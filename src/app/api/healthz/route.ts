@@ -5,8 +5,16 @@ export async function GET() {
   try {
     await redis.ping();
 
-    return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json(
+      { ok: true },
+      { status: 200 }
+    );
   } catch (error) {
-    return NextResponse.json({ ok: false }, { status: 200 });
+    console.error("Redis health check failed:", error);
+
+    return NextResponse.json(
+      { ok: false },
+      { status: 500 }
+    );
   }
 }

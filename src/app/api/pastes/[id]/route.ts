@@ -1,25 +1,13 @@
 import { NextResponse } from "next/server";
-import { redis } from "../../../../lib/redis";
-import { headers } from "next/headers";
-
-async function getNow(): Promise<number> {
-  if (process.env.TEST_MODE === "1") {
-    const h = await headers();
-    const testNow = h.get("x-test-now-ms");
-    if (testNow) {
-      return Number(testNow);
-    }
-  }
-  return Date.now();
-}
+import { redis } from "@/lib/redis";
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params; // ✅ FIX IS HERE
-  const key = `paste:${id}`;
+  const { id } = await params;
 
+  const key = `paste:${id}`;
   const paste = await redis.get<any>(key);
 
   if (!paste) {
@@ -29,36 +17,44 @@ export async function GET(
     );
   }
 
-  const now = await getNow();
+  const now = Date.now();
 
-  // Expiry check
-  if (paste.expires_at && now > paste.expires_at) {
+  // TTL check
+  if (paste.expires_at && paste.expires_at < now) {
     await redis.del(key);
     return NextResponse.json(
       { error: "Paste expired" },
-      { status: 410 }
+      { status: 404 }
     );
   }
 
-  // Max views check
-  if (paste.max_views !== null && paste.view_count >= paste.max_views) {
+  // Increment FIRST
+  const newViewCount = paste.view_count + 1;
+
+  // Max views check AFTER increment
+  if (
+    paste.max_views !== null &&
+    newViewCount > paste.max_views
+  ) {
     await redis.del(key);
     return NextResponse.json(
       { error: "Paste view limit reached" },
-      { status: 410 }
+      { status: 404 }
     );
   }
 
-  // Increment view count
-  paste.view_count += 1;
-  await redis.set(key, paste);
+  // Persist increment
+  await redis.set(key, {
+    ...paste,
+    view_count: newViewCount,
+  });
 
   return NextResponse.json({
     content: paste.content,
+    expires_at: paste.expires_at,
     views_remaining:
       paste.max_views !== null
-        ? paste.max_views - paste.view_count
+        ? paste.max_views - newViewCount
         : null,
-    expires_at: paste.expires_at,
   });
 }

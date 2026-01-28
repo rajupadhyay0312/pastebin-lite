@@ -65,13 +65,7 @@ export async function POST(req: Request) {
       view_count: 0,
     };
 
-    // 🔍 DEBUG LOGS (important)
-    console.log("REDIS URL:", process.env.UPSTASH_REDIS_REST_URL);
-    console.log(
-      "REDIS TOKEN EXISTS:",
-      !!process.env.UPSTASH_REDIS_REST_TOKEN
-    );
-
+    // ✅ FIX: store object directly (NOT JSON.stringify)
     await redis.set(`paste:${id}`, paste);
 
     const baseUrl = process.env.VERCEL_URL
